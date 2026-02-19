@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Vocal Coach - v10.0 Content Focus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        
+        /* INTERFAZ GENERAL */
+        .metric-card {
+            background: #1e293b; border-radius: 12px; padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            border: 1px solid #334155; transition: all 0.3s ease;
+            position: relative; overflow: hidden;
+        }
+        .metric-card.locked { 
+            border-color: #3b82f6; opacity: 0.7; transform: scale(0.98);
+        }
+
+        .interaction-area {
+            background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 24px;
+            min-height: 550px; display: flex; flex-direction: column; justify-content: center; position: relative;
+        }
+
+        .user-bubble {
+            background: #1e293b; border-left: 4px solid #3b82f6; padding: 20px;
+            border-radius: 0 12px 12px 0; margin-bottom: 15px; animation: fadeIn 0.5s ease;
+        }
+        
+        .coach-bubble {
+            background: #422006; border-left: 4px solid #f59e0b; padding: 15px;
+            border-radius: 8px; margin-bottom: 20px; animation: slideInLeft 0.5s ease;
+            display: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }
+        .coach-bubble.active { display: block; }
+
+        .mode-tab {
+            padding: 10px 20px; font-weight: bold; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+            color: #94a3b8; flex: 1; text-align: center;
+        }
+        .mode-tab.active {
+            color: #3b82f6; border-bottom-color: #3b82f6; background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* MODAL REPORTE */
+        #supervisorModal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 50; overflow-y: auto; padding: 2rem; }
+        .report-card { background: #1e293b; max-width: 1000px; margin: 0 auto; border-radius: 16px; border: 1px solid #3b82f6; padding: 2rem; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        
+        .bot-indicator { position: absolute; bottom: 15px; left: 24px; display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.3s; }
+        .bot-indicator.active { opacity: 1; }
+        .bar { width: 4px; background: #f59e0b; animation: sound 0.5s infinite; border-radius: 2px; }
+        @keyframes sound { 0%, 100% { height: 8px; } 50% { height: 24px; } }
+        .bar:nth-child(1) { animation-delay: 0s; } .bar:nth-child(2) { animation-delay: 0.1s; } .bar:nth-child(3) { animation-delay: 0.2s; }
+
+        .status-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; border: 1px solid; }
+        .status-listening { background: #064e3b; color: #34d399; border-color: #059669; }
+        .status-paused { background: #1e3a8a; color: #93c5fd; border-color: #3b82f6; }
+        .status-coach { background: #713f12; color: #fcd34d; border-color: #f59e0b; }
+
+        /* Estilos para el reporte de texto */
+        .transcript-diff { font-family: 'Courier New', monospace; font-size: 0.9rem; }
+        .keyword-hit { color: #4ade80; font-weight: bold; text-decoration: underline; }
+        .keyword-miss { color: #f87171; }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-file-contract text-blue-500"></i> QA Vocal Coach <span class="text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded">v10.0</span>
+            </h1>
+            <p class="text-slate-400 text-sm">Evaluación de Contenido y Adherencia</p>
+        </div>
+        
+        <div class="flex bg-slate-800 rounded-lg overflow-hidden border border-slate-700 w-full md:w-auto">
+            <div id="tabReading" class="mode-tab active" onclick="setMode('reading')">
+                <i class="fas fa-book-open mr-2"></i> Lectura Guiada
+            </div>
+            <div id="tabFree" class="mode-tab" onclick="setMode('free')">
+                <i class="fas fa-microphone-alt mr-2"></i> Modo Libre
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <a href="index.html" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2 px-4 rounded-lg shadow-lg transition text-sm flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Volver
+            </a>
+            
+            <button id="btnStart" onclick="startSystem()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition text-sm">
+                <i class="fas fa-play mr-1"></i> INICIAR
+            </button>
+            <button id="btnPause" onclick="togglePause()" class="hidden bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition text-sm">
+                <i class="fas fa-pause mr-1"></i> PAUSAR
+            </button>
+            <button id="btnStop" onclick="forceStopSystem()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition text-sm">
+                <i class="fas fa-stop mr-1"></i> FINALIZAR
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        
+        <div class="lg:col-span-3 space-y-6">
+            <div class="interaction-area shadow-lg relative">
+                <div id="displayArea" class="w-full max-w-3xl mx-auto">
+                    <div class="text-center text-slate-400">
+                        <i class="fas fa-user-tie text-5xl mb-4 text-slate-600"></i>
+                        <p class="text-xl mb-2">Caso: <b>Roberto Ramos Castro</b></p>
+                        <p class="text-sm text-yellow-500">
+                            <i class="fas fa-info-circle"></i> El sistema evaluará <b>qué dijiste</b> vs <b>qué debías decir</b>.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="absolute bottom-4 left-6 right-6 flex justify-between items-center">
+                    <div id="botIndicator" class="bot-indicator">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        <span class="text-yellow-500 font-bold text-xs tracking-wider ml-2">SISTEMA HABLANDO...</span>
+                    </div>
+                    <div id="micStatus" class="hidden">
+                        <span id="micStatusText" class="status-paused">EN PAUSA</span>
+                    </div>
+                    <button id="skipBtn" onclick="manualTrigger()" class="hidden text-xs text-slate-500 hover:text-white border border-slate-700 px-3 py-1 rounded">
+                        Siguiente <i class="fas fa-forward ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-lg p-4 border border-slate-700 h-32 overflow-y-auto text-xs font-mono text-slate-300" id="transcript">
+                <span class="text-slate-600">[El historial de tu conversación aparecerá aquí...]</span>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1 space-y-4">
+            <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                <h3 class="text-sm font-bold text-white mb-2"><i class="fas fa-bullseye text-green-400 mr-2"></i> Palabras Clave</h3>
+                <p class="text-xs text-slate-400 mb-3">Debes mencionar estos conceptos en tu respuesta:</p>
+                <div id="keywordsList" class="flex flex-wrap gap-2">
+                    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-500">Esperando inicio...</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                <h3 class="text-sm font-bold text-white mb-2"><i class="fas fa-comment-alt text-blue-400 mr-2"></i> Estado de Voz</h3>
+                <p id="voiceStatusDebug" class="text-xs text-slate-300">Inactivo</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="supervisorModal">
+        <div class="report-card animate-bounce-in">
+            <div class="border-b border-slate-700 pb-4 mb-4 flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold text-white"><i class="fas fa-clipboard-check text-blue-500 mr-2"></i> Feedback de Contenido</h2>
+                    <p class="text-slate-400 text-xs">Análisis semántico de tu gestión</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-slate-400 uppercase">Precisión</p>
+                    <div id="globalScore" class="text-3xl font-bold text-white">--%</div>
+                </div>
+            </div>
+            <div class="space-y-4 overflow-y-auto max-h-[60vh] pr-2" id="reportContent"></div>
+            <div class="mt-6 flex justify-center">
+                <button onclick="closeModal()" class="bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold py-2 px-6 rounded-full transition">Cerrar Reporte</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GUION ---
+        const strictFlow = [
+            { step: 1, stage: "Saludo", coachAudio: "Inicia con un saludo natural. Usa el nombre del cliente.", coachVisual: "Objetivo: Generar cercanía inicial.", advisor: "Hola Roberto, ¿cómo estás?", keywords: ["hola", "roberto", "estás"], client: "Sí, ¿quién habla? ¿Quién es?" },
+            { step: 2, stage: "Validación", coachAudio: "Valida el nombre y apellidos completos antes de dar información.", coachVisual: "Objetivo: Seguridad de la información.", advisor: "¿Me comunico con el señor Roberto Ramos Castro?", keywords: ["roberto", "ramos", "castro", "señor"], client: "Sí sí, soy yo quién es? Quién habla?" },
+            { step: 3, stage: "Motivo y Deuda", coachAudio: "Preséntate, menciona el banco, los días de mora y el monto total. Usa la palabra AYUDARLE.", coachVisual: "Objetivo: Claridad y Técnica 3A (Ayudar).", advisor: "Qué tal, le saluda Jonatan Santiago del banco Santander. El motivo de mi llamada es para ayudarle, ya que tiene un pendiente de pago por un préstamo personal que ya tiene 200 días de mora y un monto total de 10,000 soles. Dígame, ¿por qué hasta el momento no ha podido cancelar su deuda?", keywords: ["santander", "banco", "ayudarle", "200", "días", "mora", "10000", "diez", "mil", "por", "qué"], client: "Uy sí, joven, Sí yo tengo esa cantidad de deuda. Pero ahorita estoy ocupado. No tengo tiempo para poder hablar mucho tiempo." },
+            { step: 4, stage: "Sondeo Laboral", coachAudio: "El cliente tiene prisa. Acepta su objeción pero lanza la pregunta de sondeo laboral inmediatamente.", coachVisual: "Objetivo: Validar objeción y perfilar ingresos.", advisor: "Entiendo, Roberto, descuide que seré muy breve. Justamente porque sé que su tiempo es valioso, lo llamo para ayudarlo a cerrar este tema de una vez. Dígame algo rápido para saber cómo orientarlo mejor, ¿actualmente usted se encuentra trabajando? Y de ser así, ¿lo hace de manera independiente o para alguna empresa (dependiente)?", keywords: ["breve", "rápido", "trabajando", "trabajo", "independiente", "dependiente"], client: "No mira lo que pasa que ahorita yo no estoy trabajando, solo hago algunos pequeños cachuelos, que son trabajos eventuales, no? Y pero no tengo muchos ingresos en este momento." },
+            { step: 5, stage: "Sondeo Apoyo", coachAudio: "Es independiente. Indaga si tiene apoyo familiar para cubrir gastos.", coachVisual: "Objetivo: Buscar terceros pagadores.", advisor: "Entiendo, Roberto, comprendo que con esos trabajos eventuales o 'cachuelos' el ingreso no es seguro y se hace difícil organizarse. Sin embargo, para poder ver qué opciones de ayuda le puedo brindar, coménteme: ¿quién lo apoya actualmente con sus gastos de la casa o los servicios?", keywords: ["apoya", "ayuda", "gastos", "casa", "servicios"], client: "No joven ahorita nadie me está este ayudando." },
+            { step: 6, stage: "Negociación 1 (Capital)", coachAudio: "Está solo. Usa el conector 'Sin embargo' y ofrece descuento total de intereses. Baja a 6 mil.", coachVisual: "Estrategia: Oferta Jerárquica 1 (Solo Capital).", advisor: "Comprendo, Roberto, que usted mismo esté haciendo todo el esfuerzo solo con lo que sale de sus trabajos eventuales para mantenerse al día con sus gastos básicos. Sin embargo, su deuda total actualmente es de 10,000 soles. Yo estoy aquí para ayudarlo, por eso le propongo lo siguiente: voy a realizarle un descuento importante sobre todos los intereses generados para que usted pueda cancelar su pendiente pagando únicamente 6,000 soles y así deje de preocuparse por este tema.", keywords: ["sin", "embargo", "descuento", "intereses", "6000", "seis", "mil"], client: "Me parece Me parece muy bueno el descuento joven de 6000 soles, pero yo ahorita pagar 6,000 soles no tengo dónde voy a Sacar, como dije solamente hago algunos cachuelos y solamente tengo para mi día a día, no jodven ahorita Yo no tengo esa cantidad para poder pagar." },
+            { step: 7, stage: "Negociación 2 (Cuotas)", coachAudio: "No tiene liquidez. Ofrece pagar los 6 mil en cuotas y vende el beneficio de limpiar historial.", coachVisual: "Estrategia: Flexibilidad + Beneficio Futuro.", advisor: "Entiendo perfectamente, Roberto, que pagar los 6,000 soles de un solo golpe es muy pesado cuando uno vive del día a día con sus trabajos eventuales. Sin embargo, una de las alternativas que le ofrezco es que pueda pagar estos 6,000 soles en cuotas. De esta manera será mucho más fácil para usted y podrá limpiar su historial crediticio para que los bancos vuelvan a confiar en usted. Podríamos dividirlo en 3 o 4 cuotas de un monto que se acomode a lo que usted va recibiendo. Dígame, ¿le ayudaría este fraccionamiento para poder cumplir?", keywords: ["cuotas", "fraccionamiento", "limpiar", "historial", "crediticio", "bancos"], client: "Poner en cuotas, no de tres o cuatro cuotas, pero igual Sería mucho Pues para mí encima estár pagando mensualmente es un tema muy complicado yo ahorita no, no puedo, como te digo estoy pasando una situación difícil encima joven Tengo cuatro hijos, de dónde voy a sacar para poder mantenerlos?" },
+            { step: 8, stage: "Negociación 3 (Fidelidad)", coachAudio: "Mencionó sus hijos. Empatiza con eso y usa su historial de 'buen cliente' para bajar a 4 mil soles.", coachVisual: "Estrategia: Empatía Familiar + Premio Fidelidad.", advisor: "Comprendo totalmente su preocupación, Roberto. Tener cuatro hijos es una responsabilidad enorme y entiendo que su prioridad ahora es la alimentación y el bienestar de su familia por encima de cualquier otra cosa. Sin embargo, veo aquí en el sistema que usted antes fue un cliente muy puntual con sus pagos y siempre cumplió con su palabra, por ello, valorando ese buen comportamiento que tuvo, puedo ayudarlo también haciéndole un descuento único para que pague incluso menos del capital. Con tan solo 4,000 soles usted liquidaría absolutamente todo y se olvidaría de esta carga.", keywords: ["hijos", "familia", "puntual", "comportamiento", "4000", "cuatro", "mil"], client: "Son 4000 soles el descuento es muy bueno joven Mira para mí Los pagar los 4000 soles de una sería complicado no ahorita en mi situación, a que les cuento es muy bueno y se ve que que me estás queriendo ayudar, pero no ahorita yo no tengo esa cantidad, es muy complicado para mí mi situación." },
+            { step: 9, stage: "Campaña Final (Espejo)", coachAudio: "Aplica técnica de espejo: 'Yo también pasé momentos difíciles'. Luego lanza la Campaña de 3 mil soles.", coachVisual: "Estrategia: Técnica Espejo + Oferta Final.", advisor: "Mire, Roberto, le soy sincero: así como usted, yo también he pasado momentos difíciles y sé lo que es tener que elegir entre una cosa y otra para sacar adelante a la familia. Por eso entiendo perfectamente lo que está pasando y quiero ayudarlo de verdad. Tengo una opción que es la mejor de todas, pero solo está disponible si el pago lo hacemos el día de hoy o máximo el día de mañana. Es un descuento único, un monto campaña de tan solo 3,000 soles. Con eso usted mata la deuda de 10,000 soles, limpia su nombre y recupera la tranquilidad para usted y sus hijos.", keywords: ["sincero", "difíciles", "familia", "3000", "tres", "mil", "campaña"], client: "Wow 3000 soles es un monto más accesible para mí yo creo que haciendo un esfuerzo podría conseguir los 3000 soles, pero este monto se lo podría conseguir todavía para fin de mes, no para ahorita estamos 7 de febrero. Yo lo pude conseguir para el día 28 de febrero, si me das ese tiempo yo lo podría cancelar." },
+            { step: 10, stage: "Urgencia (Escasez)", coachAudio: "Quiere pagar a fin de mes. Rechaza la fecha. Dile que la campaña desaparece mañana.", coachVisual: "Estrategia: Presión por Escasez (Ahora o Nunca).", advisor: "Mire, Roberto, me da mucho gusto que tenga esa intención y que vea que los 3,000 soles son un monto alcanzable para usted. Sin embargo, tengo que serle muy claro: si no tomamos esta opción hoy o mañana, después de estos dos días ya no estará disponible y el sistema volverá a cargarle el monto capital o total de los 10,000 soles. Eso es algo que no queremos, porque perdería este beneficio único. Aproveche este descuento excepcional que le estamos brindando hoy; por favor, haga un esfuerzo para conseguir y liquidar todo el monto mañana mismo. Quizás algún familiar o amigo, sabiendo que con eso usted limpia su nombre para siempre, pueda darle una mano para no perder esta campaña que no se va a repetir.", keywords: ["hoy", "mañana", "disponible", "sistema", "monto", "total", "esfuerzo"], client: "Joven Mira yo puedo hacer un esfuerzo Así lo máximo hablando con mis familiares robando un banco Tengo este haciendo muchas cosas para pagar un monto de tres millones, pero te puedo conseguir hasta quincena nada más quincena." },
+            { step: 11, stage: "Intención Abono", coachAudio: "Pide quincena. No lo dejes ir. Pide un abono ahora para marcar intención.", coachVisual: "Estrategia: Amarre con Abono Parcial.", advisor: "Mire, Roberto, yo veo que usted tiene una intención de pago real y que de verdad quiere solucionar este problema por el bienestar de sus hijos. Sin embargo, como le comenté, la campaña de los 3,000 soles vence mañana mismo y el sistema no me permite reservarla hasta quincena. Lo que podemos hacer para que no pierda la oportunidad es que usted realice un abono ahora mismo, con lo que tenga a la mano, para que el banco vea esa intención de pago. De esa manera, su cuenta queda marcada con movimiento y yo puedo ayudarlo a pelear para que le mantengan o le consigan campañas de descuento menores o similares más adelante cuando llegue a la quincena.", keywords: ["intención", "pago", "abono", "ahora", "marcada", "pelear"], client: "Ahora pero sí voy pagando el abono perdería esta campaña o lo mantendría. Es de 3000 soles." },
+            { step: 12, stage: "Cierre Abono", coachAudio: "Sé transparente: el abono congela el caso como promesa. Pide un monto para hoy.", coachVisual: "Estrategia: Transparencia + Cierre de Monto.", advisor: "Mire, Roberto, le voy a hablar con total transparencia: para asegurar los 3,000 soles al 100%, el pago debe ser total entre hoy y mañana. Sin embargo, al usted realizar ese abono de una vez, yo puedo congelar su caso y subirlo al sistema como una 'promesa de pago en proceso'. Esto demuestra al banco que usted es un cliente serio, y me da la herramienta legal para mantenerle este beneficio o incluso buscarle una campaña mejor para su liquidación final. Vamos a realizar el compromiso de pago ahora mismo para que no se me quede fuera de la lista. Dígame, ¿con cuánto podría ir abonando hoy para que yo pueda separar su campaña de una vez?", keywords: ["transparencia", "promesa", "proceso", "congelar", "cuánto", "abonando"], client: "Ya fue, haciendo un esfuerzo muy grande. Yo te puedo conseguir para este de aquí a tres días 100 soles y con 100 soles puedo ir ahí abonando" },
+            { step: 13, stage: "Compromiso", coachAudio: "Acepta los 100 soles. Confirma fecha (10 de feb) y cierra.", coachVisual: "Estrategia: Formalización del Acuerdo.", advisor: "Entendido, Roberto. Si bien lo ideal es que sea hoy mismo, voy a registrar esos 100 soles como su señal de compromiso para que el banco vea su voluntad de pago y no le anulen el beneficio de la campaña de 3,000 soles. Vamos a realizar el compromiso de pago entonces. Usted me indica que de aquí a tres días, es decir, el 10 de febrero, realizará este abono de 100 soles, ¿correcto?", keywords: ["100", "cien", "10", "febrero", "correcto", "compromiso"], client: "si es correcto joven." },
+            { step: 14, stage: "Despedida", coachAudio: "Pide el voucher por WhatsApp y despídete.", coachVisual: "Objetivo: Evidencia.", advisor: "Por favor, cuando realice el pago me envía el voucher por WhatsApp de inmediato para yo subirlo al sistema y que su cuenta figure con movimiento. Muchas gracias por su tiempo, Roberto. Le estaré llamando en los próximos días para ver si logró conseguir el resto o para confirmar su abono. Que tenga un buen día.", keywords: ["voucher", "foto", "whatsapp", "gracias", "día"], client: "Gracias." }
+        ];
+
+        // --- ESTADO ---
+        let state = {
+            step: 0, active: false, botTalking: false, userTalking: false, coachTalking: false, paused: false,
+            startTime: 0, metrics: [], mode: 'reading', stepTranscript: ''
+        };
+
+        let audioCtx, mic, recognition, synth;
+        let finalTranscript = '';
+
+        function setMode(mode) {
+            state.mode = mode;
+            document.getElementById('tabReading').classList.toggle('active', mode === 'reading');
+            document.getElementById('tabFree').classList.toggle('active', mode === 'free');
+            if(state.active && !state.coachTalking && !state.botTalking) renderStep();
+        }
+
+        async function startSystem() {
+            if (state.active) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                synth = window.speechSynthesis;
+                initRecognition();
+                
+                state.active = true;
+                state.step = 0;
+                state.metrics = [];
+                state.paused = false;
+                finalTranscript = '';
+                state.stepTranscript = '';
+                
+                uiSetRunning(true);
+                triggerCoachInstruction(); 
+
+            } catch (e) { alert("Error: " + e.message); }
+        }
+
+        function togglePause() {
+            if(!state.active) return;
+            const btn = document.getElementById('btnPause');
+            
+            if(!state.paused) {
+                state.paused = true;
+                if(audioCtx) audioCtx.suspend();
+                if(recognition) recognition.stop();
+                if(synth) synth.pause();
+                btn.innerHTML = '<i class="fas fa-play mr-1"></i> CONTINUAR';
+                btn.className = "bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition text-sm";
+                document.getElementById('micStatusText').innerText = "⏸️ SISTEMA PAUSADO";
+                document.getElementById('micStatusText').className = "status-paused";
+            } else {
+                state.paused = false;
+                if(audioCtx) audioCtx.resume();
+                if(synth) synth.resume();
+                if(!state.coachTalking && !state.botTalking) recognition.start();
+                
+                btn.innerHTML = '<i class="fas fa-pause mr-1"></i> PAUSAR';
+                btn.className = "bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition text-sm";
+                updateStatusUI();
+            }
+        }
+
+        function forceStopSystem() { stopSystem(true); }
+
+        function stopSystem(showReportFlag = true) {
+            if (showReportFlag && state.metrics && state.metrics.length > 0) showReport();
+            
+            state.active = false;
+            state.paused = false;
+            if (recognition) recognition.stop();
+            if (audioCtx) audioCtx.close();
+            if (synth) synth.cancel();
+            
+            uiSetRunning(false);
+        }
+
+        function triggerCoachInstruction() {
+            if (state.step >= strictFlow.length) return;
+            const data = strictFlow[state.step];
+            
+            state.coachTalking = true;
+            updateStatusUI();
+            if (recognition) recognition.stop(); // SAFETY STOP
+
+            renderStep(true); 
+
+            const utter = new SpeechSynthesisUtterance(data.coachAudio);
+            utter.lang = 'es-MX'; utter.rate = 1.0; utter.pitch = 0.8;    
+            
+            utter.onend = () => {
+                state.coachTalking = false;
+                document.getElementById('coachBubble').classList.remove('active');
+                state.stepTranscript = ''; 
+                updateStatusUI();
+                
+                // SAFETY TIMEOUT: Espera 1s antes de activar micro para evitar eco
+                if (state.active && !state.paused) {
+                    setTimeout(() => {
+                        if(state.active && !state.paused && !state.botTalking) recognition.start();
+                    }, 1000); 
+                }
+            };
+            window.speechSynthesis.speak(utter);
+        }
+
+        function renderStep(showCoach = false) {
+            if (state.step >= strictFlow.length) { stopSystem(true); return; }
+            const data = strictFlow[state.step];
+            
+            // Render Keywords en sidebar
+            const kwList = document.getElementById('keywordsList');
+            kwList.innerHTML = data.keywords.map(k => `<span class="text-xs bg-slate-700 px-2 py-1 rounded text-green-400">${k}</span>`).join('');
+
+            const coachHTML = `
+                <div id="coachBubble" class="coach-bubble ${showCoach ? 'active' : ''}">
+                    <div class="flex items-center gap-2 mb-2 text-yellow-500 border-b border-yellow-500/30 pb-2">
+                        <i class="fas fa-lightbulb"></i> <span class="font-bold text-xs uppercase tracking-widest">Estrategia</span>
+                    </div>
+                    <p class="text-white font-medium text-lg leading-snug">${data.coachVisual}</p>
+                </div>`;
+
+            let advisorText = data.advisor;
+            let bubbleClass = "user-bubble text-left relative group";
+            
+            if (state.mode === 'free') {
+                advisorText = `<span class="text-slate-400 italic text-sm"><i class="fas fa-microphone-alt text-blue-400"></i> Usa tus propias palabras...</span>`;
+                bubbleClass += " border-gray-600"; 
+            } else {
+                advisorText = `"${advisorText}"`;
+            }
+
+            document.getElementById('displayArea').innerHTML = `
+                <div class="text-center w-full max-w-2xl mx-auto">
+                    ${coachHTML}
+                    <div class="mb-4 mt-6">
+                        <span class="text-blue-400 font-bold text-xs tracking-widest uppercase">${data.stage}</span>
+                        <h2 class="text-2xl font-bold text-white mt-1">Paso ${data.step}</h2>
+                    </div>
+                    <div class="${bubbleClass}">
+                        <div class="absolute -top-3 left-4 bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                            ${state.mode === 'free' ? 'Objetivo' : 'Tu Guion'}
+                        </div>
+                        <p class="text-lg text-white leading-relaxed font-medium">${advisorText}</p>
+                    </div>
+                    <div class="mt-8">
+                        <p id="flowStatus" class="text-slate-500 text-sm animate-pulse">🎤 Esperando tu voz...</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function triggerBot() {
+            if (state.step >= strictFlow.length) return;
+            const text = strictFlow[state.step].client;
+            
+            state.botTalking = true;
+            updateStatusUI();
+            if (recognition) recognition.stop(); // SAFETY STOP
+
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'es-US'; utter.rate = 1.1;
+            
+            utter.onend = () => {
+                state.botTalking = false;
+                state.step++;
+                // SAFETY TIMEOUT: Espera 1s antes de que el Coach hable o micro active
+                setTimeout(() => {
+                    if (state.step < strictFlow.length) {
+                        triggerCoachInstruction();
+                    } else {
+                        stopSystem(true);
+                    }
+                }, 1000);
+            };
+            window.speechSynthesis.speak(utter);
+            
+            const t = document.getElementById('transcript');
+            t.innerHTML += `<div class="text-yellow-500 mt-1 text-right">[CLIENTE]: ${text}</div>`;
+            t.scrollTop = t.scrollHeight;
+        }
+
+        function initRecognition() {
+            const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new Speech();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'es-PE';
+            
+            recognition.onresult = (e) => {
+                // HARD GATE: Si el sistema habla o está pausado, IGNORAR todo
+                if (state.botTalking || state.coachTalking || state.paused) {
+                    console.log("Ignorando input: sistema hablando");
+                    return;
+                }
+
+                let inter = '';
+                for (let i = e.resultIndex; i < e.results.length; ++i) {
+                    if (e.results[i].isFinal) {
+                        let phrase = e.results[i][0].transcript;
+                        finalTranscript += phrase + ' ';
+                        state.stepTranscript += phrase + ' '; 
+                        
+                        // Solo procesar si hay texto real y no es ruido
+                        if(phrase.length > 2) {
+                            const status = document.getElementById('flowStatus');
+                            if (status) status.innerText = "Procesando...";
+                            manualTrigger(); // Ir al siguiente paso
+                        }
+                    } else inter += e.results[i][0].transcript;
+                }
+                document.getElementById('transcript').innerHTML = `<span class="text-white">${finalTranscript}</span> <span class="text-slate-500">${inter}</span>`;
+            };
+            
+            // Auto-restart si se corta inesperadamente, pero respetando estados
+            recognition.onend = () => { 
+                if (state.active && !state.botTalking && !state.coachTalking && !state.paused) {
+                    recognition.start(); 
+                }
+            };
+        }
+
+        function manualTrigger() { 
+            saveMetrics();
+            triggerBot(); 
+        }
+
+        function saveMetrics() {
+            // Semantic Audit
+            let adherence = 100;
+            let spoken = state.stepTranscript.toLowerCase();
+            
+            if (state.step < strictFlow.length) {
+                const keywords = strictFlow[state.step].keywords;
+                let matches = keywords.filter(k => spoken.includes(k.toLowerCase())).length;
+                
+                // Calculo simple de adherencia
+                if (state.mode === 'free') {
+                    adherence = Math.min(100, Math.round((matches / Math.max(1, keywords.length * 0.6)) * 100));
+                }
+
+                state.metrics.push({
+                    step: state.step,
+                    transcript: state.stepTranscript,
+                    adherence: adherence
+                });
+            }
+        }
+
+        function updateStatusUI() {
+            const st = document.getElementById('micStatusText');
+            const ind = document.getElementById('botIndicator');
+            const vStatus = document.getElementById('voiceStatusDebug');
+
+            if (state.coachTalking) {
+                st.innerText = "COACH DANDO INSTRUCCIÓN"; st.className = "status-coach";
+                ind.classList.remove('active');
+                vStatus.innerText = "Coach Hablando (Micro OFF)";
+                vStatus.className = "text-xs text-yellow-500 font-bold";
+            } else if (state.botTalking) {
+                st.innerText = "CLIENTE HABLANDO"; st.className = "status-paused";
+                ind.classList.add('active');
+                vStatus.innerText = "Bot Hablando (Micro OFF)";
+                vStatus.className = "text-xs text-blue-500 font-bold";
+            } else if (state.active && !state.paused) {
+                st.innerText = "ESCUCHANDO TU VOZ..."; st.className = "status-listening";
+                ind.classList.remove('active');
+                vStatus.innerText = "Micro Activo (Esperando input)";
+                vStatus.className = "text-xs text-green-500 font-bold";
+            } else {
+                st.innerText = "PAUSADO"; st.className = "status-paused";
+                vStatus.innerText = "Sistema Detenido";
+                vStatus.className = "text-xs text-slate-500";
+            }
+        }
+
+        function uiSetRunning(isRunning) {
+            document.getElementById('btnStart').classList.toggle('opacity-50', isRunning);
+            document.getElementById('btnStop').disabled = !isRunning;
+            document.getElementById('btnStop').classList.toggle('opacity-50', !isRunning);
+            
+            document.getElementById('btnPause').classList.toggle('hidden', !isRunning);
+            if(!isRunning) {
+                const btn = document.getElementById('btnPause');
+                btn.innerHTML = '<i class="fas fa-pause mr-1"></i> PAUSAR';
+                btn.className = "hidden bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition text-sm";
+            }
+            document.getElementById('skipBtn').classList.toggle('hidden', !isRunning);
+            document.getElementById('micStatus').classList.toggle('hidden', !isRunning);
+        }
+
+        function showReport() {
+            const modal = document.getElementById('supervisorModal');
+            const content = document.getElementById('reportContent');
+            const scoreEl = document.getElementById('globalScore');
+            let html = ''; let total = 0; let count = 0;
+
+            state.metrics.forEach((m, i) => {
+                if (i >= strictFlow.length) return;
+                const stepName = strictFlow[i].stage;
+                const target = strictFlow[i].keywords.join(", ");
+                
+                total += m.adherence; count++;
+                
+                // Marcar keywords encontradas
+                let displayTranscript = m.transcript;
+                strictFlow[i].keywords.forEach(k => {
+                    const regex = new RegExp(`(${k})`, 'gi');
+                    displayTranscript = displayTranscript.replace(regex, '<span class="keyword-hit">$1</span>');
+                });
+
+                html += `
+                    <div class="bg-slate-800 p-4 rounded mb-2 border-l-4 ${m.adherence > 70 ? 'border-green-500' : 'border-yellow-500'}">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-bold text-white">${stepName}</span>
+                            <span class="text-slate-400 text-xs font-bold ${m.adherence > 70 ? 'text-green-400' : 'text-yellow-400'}">Adherencia: ${m.adherence}%</span>
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 text-xs">
+                            <div class="bg-slate-900 p-2 rounded">
+                                <span class="text-slate-500 block mb-1">Debías mencionar:</span>
+                                <span class="text-blue-300">${target}</span>
+                            </div>
+                            <div class="bg-slate-900 p-2 rounded">
+                                <span class="text-slate-500 block mb-1">Dijiste:</span>
+                                <p class="text-slate-300 transcript-diff">"${displayTranscript}"</p>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            
+            let final = count > 0 ? Math.round(total / count) : 0;
+            scoreEl.innerText = final + "%";
+            content.innerHTML = html;
+            modal.style.display = 'block';
+        }
+        function closeModal() { document.getElementById('supervisorModal').style.display = 'none'; }
+    </script>
+</body>
+</html>
