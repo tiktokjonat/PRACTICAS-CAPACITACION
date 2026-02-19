@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Entrenamiento - QA Vocal Coach</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        
+        /* CARD STYLES */
+        .module-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 32px 24px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-card:hover {
+            transform: translateY(-5px);
+            border-color: #3b82f6;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.2);
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+
+        .module-card:hover::before {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        }
+
+        .card-icon {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .module-card:hover .card-icon {
+            transform: scale(1.15);
+        }
+
+        /* SPECIFIC CARD ACCENTS */
+        .card-speech:hover { border-color: #3b82f6; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.2); }
+        .card-speech:hover::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        
+        .card-obj:hover { border-color: #f59e0b; box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.2); }
+        .card-obj:hover::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+        .card-sondeo:hover { border-color: #14b8a6; box-shadow: 0 10px 25px -5px rgba(20, 184, 166, 0.2); }
+        .card-sondeo:hover::before { background: linear-gradient(90deg, #14b8a6, #2dd4bf); }
+
+        .card-persuasion:hover { border-color: #a855f7; box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.2); }
+        .card-persuasion:hover::before { background: linear-gradient(90deg, #a855f7, #c084fc); }
+
+        .card-disabled { opacity: 0.6; cursor: not-allowed; }
+        .card-disabled:hover { transform: none; border-color: #334155; box-shadow: none; }
+        .card-disabled:hover::before { background: transparent; }
+
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-blue-500 selection:text-white">
+
+    <header class="pt-16 pb-10 text-center px-4">
+        <div class="inline-block bg-slate-800 border border-slate-700 rounded-full px-4 py-1.5 mb-6 shadow-lg">
+            <span class="text-sm font-bold text-blue-400 uppercase tracking-widest"><i class="fas fa-bolt mr-2"></i>Academia de Asesores</span>
+        </div>
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
+            Portal de <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Entrenamiento QA</span>
+        </h1>
+        <p class="text-slate-400 max-w-2xl mx-auto text-lg">
+            Selecciona el módulo de práctica para comenzar tu sesión. El sistema evaluará tu calidad vocal, adherencia al guion y capacidad de respuesta.
+        </p>
+    </header>
+
+    <main class="flex-1 w-full max-w-6xl mx-auto px-6 pb-20">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+            <a href="speech.html" class="module-card card-speech group">
+                <div class="bg-blue-900/30 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 card-icon">
+                    <i class="fas fa-headset text-4xl text-blue-400"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-3">Simulador de Speech</h2>
+                <p class="text-slate-400 text-sm mb-6 flex-1">
+                    Practica el flujo completo de cobranza (Caso Roberto Ramos). La IA evaluará tu volumen, fluidez y el uso de palabras clave estratégicas.
+                </p>
+                <div class="w-full flex items-center justify-between mt-auto border-t border-slate-700 pt-4">
+                    <span class="text-xs font-bold text-blue-400 uppercase">Módulo 1</span>
+                    <span class="bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-bold group-hover:bg-blue-500 transition">Entrar <i class="fas fa-arrow-right ml-1"></i></span>
+                </div>
+            </a>
+
+            <a href="objeciones.html" class="module-card card-obj group">
+                <div class="bg-yellow-900/30 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 card-icon">
+                    <i class="fas fa-shield-alt text-4xl text-yellow-500"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-3">Dojo de Objeciones</h2>
+                <p class="text-slate-400 text-sm mb-6 flex-1">
+                    Enfréntate a 20 escenarios reales donde el cliente se niega a pagar. Entrena tu capacidad de respuesta rápida con técnicas de persuasión.
+                </p>
+                <div class="w-full flex items-center justify-between mt-auto border-t border-slate-700 pt-4">
+                    <span class="text-xs font-bold text-yellow-500 uppercase">Módulo 2</span>
+                    <span class="bg-yellow-600 text-white text-xs px-3 py-1 rounded-full font-bold group-hover:bg-yellow-500 transition">Entrar <i class="fas fa-arrow-right ml-1"></i></span>
+                </div>
+            </a>
+
+            <a href="sondeo.html" class="module-card card-sondeo group">
+                <div class="bg-teal-900/30 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 card-icon">
+                    <i class="fas fa-search-dollar text-4xl text-teal-400"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-3">Laboratorio de Sondeo</h2>
+                <p class="text-slate-400 text-sm mb-6 flex-1">
+                    El arte de preguntar. Aprende a perfilar la situación del cliente, descubrir dinero oculto y encontrar a los terceros pagadores.
+                </p>
+                <div class="w-full flex items-center justify-between mt-auto border-t border-slate-700 pt-4">
+                    <span class="text-xs font-bold text-teal-400 uppercase">Módulo 3</span>
+                    <span class="bg-teal-600 text-white text-xs px-3 py-1 rounded-full font-bold group-hover:bg-teal-500 transition">Entrar <i class="fas fa-arrow-right ml-1"></i></span>
+                </div>
+            </a>
+
+            <a href="persuasion.html" class="module-card card-persuasion group">
+                <div class="bg-purple-900/30 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 card-icon">
+                    <i class="fas fa-brain text-4xl text-purple-400"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-3">Técnicas de Persuasión</h2>
+                <p class="text-slate-400 text-sm mb-6 flex-1">
+                    Psicología aplicada a la cobranza. Aprende a usar las leyes de la influencia de Cialdini (Escasez, Reciprocidad, Autoridad) para revertir quejas.
+                </p>
+                <div class="w-full flex items-center justify-between mt-auto border-t border-slate-700 pt-4">
+                    <span class="text-xs font-bold text-purple-400 uppercase">Módulo 4</span>
+                    <span class="bg-purple-600 text-white text-xs px-3 py-1 rounded-full font-bold group-hover:bg-purple-500 transition">Entrar <i class="fas fa-arrow-right ml-1"></i></span>
+                </div>
+            </a>
+
+            <div class="module-card card-disabled">
+                <div class="bg-slate-800 w-20 h-20 rounded-2xl flex items-center justify-center mb-6">
+                    <i class="fas fa-lock text-4xl text-slate-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-500 mb-3">Clínica de Cierres</h2>
+                <p class="text-slate-500 text-sm mb-6 flex-1">
+                    Módulo avanzado enfocado exclusivamente en asegurar el compromiso de pago, manejar evasivas finales y obtener el voucher de evidencia.
+                </p>
+                <div class="w-full flex items-center justify-between mt-auto border-t border-slate-700 pt-4">
+                    <span class="text-xs font-bold text-slate-600 uppercase">Próximamente</span>
+                    <span class="bg-slate-700 text-slate-400 text-xs px-3 py-1 rounded-full font-bold"><i class="fas fa-clock"></i></span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="border-t border-slate-800 py-6 text-center mt-auto">
+        <p class="text-slate-500 text-sm">
+            &copy; 2026 Sistema de Entrenamiento de Calidad - Desarrollado para operaciones de cobranza.
+        </p>
+    </footer>
+
+</body>
+</html>
