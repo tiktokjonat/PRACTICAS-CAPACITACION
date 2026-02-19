@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio de Sondeo - QA Vocal Coach</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        
+        /* CARD STYLES */
+        .obj-list-item {
+            background: #1e293b; border: 1px solid #334155; padding: 15px;
+            cursor: pointer; transition: all 0.2s; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .obj-list-item:hover { background: #334155; }
+        /* Tono Teal/Cyan para Sondeo */
+        .obj-list-item.active { border-color: #0d9488; background: #134e4a; border-left: 4px solid #14b8a6; }
+
+        .interaction-card {
+            background: #1e293b; border-radius: 16px; border: 1px solid #0d9488;
+            min-height: 500px; display: flex; flex-direction: column; position: relative;
+            overflow: hidden;
+        }
+
+        .bot-bubble {
+            background: #334155; color: #e2e8f0; padding: 15px 20px; border-radius: 20px 20px 20px 0;
+            margin-bottom: 20px; max-width: 85%; align-self: flex-start;
+            border-left: 4px solid #94a3b8; animation: slideInLeft 0.3s;
+        }
+
+        .user-bubble {
+            background: #0f766e; color: white; padding: 20px; border-radius: 20px 20px 0 20px;
+            margin-top: auto; align-self: flex-end; width: 100%;
+            border-right: 4px solid #14b8a6; animation: slideInUp 0.3s;
+        }
+
+        .strategy-badge {
+            background: #042f2e; color: #5eead4; padding: 4px 12px; border-radius: 4px;
+            font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;
+            border: 1px solid #0d9488; display: inline-block; margin-bottom: 10px;
+        }
+
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* STATUS INDICATORS */
+        .status-listening { color: #14b8a6; animation: pulse 1.5s infinite; }
+        .status-talking { color: #facc15; }
+        .status-paused { color: #94a3b8; }
+        .status-success { color: #14b8a6; font-weight: bold; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        
+        .mode-tab {
+            padding: 10px 20px; font-weight: bold; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+            color: #94a3b8; flex: 1; text-align: center;
+        }
+        .mode-tab.active {
+            color: #14b8a6; border-bottom-color: #14b8a6; background: rgba(20, 184, 166, 0.1);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 overflow-hidden">
+
+    <div class="flex justify-between items-center mb-4 shrink-0">
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-search text-teal-400"></i> LABORATORIO DE SONDEO
+            </h1>
+            <p class="text-slate-400 text-xs">Módulo Independiente - Entrenamiento de Preguntas Clave</p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button id="btnPause" onclick="togglePause()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition shadow-lg hidden">
+                <i class="fas fa-pause mr-1"></i> PAUSAR
+            </button>
+            <a href="index.html" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-lg">
+                <i class="fas fa-home mr-2"></i> Volver al Portal
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-6 flex-1 min-h-0">
+        
+        <div class="col-span-3 bg-slate-900 rounded-xl border border-slate-700 flex flex-col overflow-hidden shadow-lg">
+            <div class="p-4 bg-slate-800 border-b border-slate-700">
+                <h3 class="text-xs font-bold text-teal-400 uppercase tracking-widest"><i class="fas fa-question-circle mr-2"></i>Escenarios de Sondeo</h3>
+            </div>
+            <div class="overflow-y-auto flex-1 p-3 space-y-2" id="objectionList">
+                </div>
+        </div>
+
+        <div class="col-span-9 flex flex-col">
+            
+            <div class="flex bg-slate-800 rounded-lg overflow-hidden border border-slate-700 w-full md:w-fit mb-4">
+                <div id="tabReading" class="mode-tab active" onclick="setMode('reading')">
+                    <i class="fas fa-book-open mr-2"></i> Lectura Guiada
+                </div>
+                <div id="tabFree" class="mode-tab" onclick="setMode('free')">
+                    <i class="fas fa-microphone-alt mr-2"></i> Modo Libre
+                </div>
+            </div>
+
+            <div class="interaction-card p-8 shadow-2xl flex-1">
+                
+                <div class="flex justify-between items-start mb-6">
+                    <div id="strategyDisplay">
+                        </div>
+                    <div id="statusIndicator" class="text-sm font-mono text-slate-500 flex items-center gap-2 bg-slate-900 px-3 py-1 rounded-full border border-slate-700">
+                        <i class="fas fa-circle text-[10px]"></i> ESPERANDO INICIO
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col relative">
+                    
+                    <div id="botArea" class="hidden flex flex-col items-start">
+                        <span class="text-xs text-slate-400 mb-1 ml-1 font-bold tracking-widest">CLIENTE (Roberto):</span>
+                        <div class="bot-bubble text-xl font-medium" id="botText">...</div>
+                        <button onclick="replayBot()" class="text-xs text-slate-500 hover:text-teal-400 mt-1 ml-1 transition">
+                            <i class="fas fa-redo"></i> Repetir comentario
+                        </button>
+                    </div>
+
+                    <div id="userArea" class="hidden mt-auto">
+                        <div class="flex justify-between items-end mb-2 ml-1">
+                            <span class="text-xs text-teal-400 font-bold uppercase tracking-widest" id="userLabel">Tu Pregunta Sugerida:</span>
+                            <span class="text-xs text-slate-500 bg-slate-900 px-2 py-1 rounded" id="micHint"><i class="fas fa-microphone text-teal-500"></i> Lee en voz alta</span>
+                        </div>
+                        <div class="user-bubble shadow-xl" id="advisorBox">
+                            <p id="advisorText" class="text-2xl font-semibold leading-relaxed">...</p>
+                        </div>
+                    </div>
+
+                    <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                        <div class="bg-teal-900/30 p-6 rounded-full mb-4 border border-teal-500/50">
+                            <i class="fas fa-search-dollar text-5xl text-teal-400"></i>
+                        </div>
+                        <h2 class="text-2xl text-white font-bold mb-2">Haz la pregunta correcta</h2>
+                        <p class="text-slate-400 text-sm max-w-md mb-6">Aprende a sondear para descubrir dinero, terceros pagadores o intenciones ocultas.</p>
+                        <button id="btnStart" onclick="startSystem()" class="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition">
+                            COMENZAR ENTRENAMIENTO
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- BASE DE DATOS DE SONDEO ---
+        const sondeoDB = [
+            { t: "Situación Laboral", c: "Sondeo Actual", q: "No, joven, ahorita no estoy trabajando en ninguna empresa.", a: "Comprendo Roberto, ¿pero actualmente realiza algún trabajo eventual o 'cachuelo' para cubrir sus gastos diarios?", keywords: ["eventual", "cachuelo", "diarios", "gastos", "comprende"], s: "Descubrir ingresos informales" },
+            { t: "Apoyo Familiar", c: "Sondeo Terceros", q: "No tengo ingresos, dependo netamente de mi familia.", a: "Entiendo. En ese caso, ¿quién de sus familiares lo apoya con los gastos? Quizás nos pueda ayudar con el pago para no manchar su historial.", keywords: ["quién", "familiar", "apoya", "historial", "ayudar"], s: "Identificar Tercero Pagador" },
+            { t: "Monto Disponible", c: "Sondeo Liquidez", q: "Yo sí quiero pagar, pero los 5,000 soles que piden es mucho.", a: "Para poder buscarle una campaña excepcional hoy mismo, dígame con total sinceridad, ¿con qué monto cuenta a la mano en este momento?", keywords: ["monto", "cuenta", "mano", "sinceridad", "momento", "hoy"], s: "Sondeo de Liquidez Inmediata" },
+            { t: "Capacidad de Cuota", c: "Sondeo Alternativa", q: "Solo podría pagarlo por partes, poco a poco.", a: "Para armarle un fraccionamiento que no le afecte, ¿cuánto es lo máximo que podría destinar mensualmente para el banco sin descuidar a su familia?", keywords: ["máximo", "destinar", "mensualmente", "descuidar", "familia", "pagar"], s: "Sondeo de Capacidad Mensual" },
+            { t: "Manejo de Tiempos", c: "Sondeo Objeción", q: "Llámame en la quincena, ahí sí te pago.", a: "Para agendar su pago y sostenerle el descuento, ¿el pago lo haría con su sueldo fijo de quincena o está esperando el cobro de algún trabajo extra?", keywords: ["sueldo", "esperando", "cobro", "extra", "quincena"], s: "Validar veracidad de la fecha" },
+            { t: "Sondeo de Intereses", c: "Sondeo Objeción", q: "No voy a pagar porque me están cobrando puros intereses usureros.", a: "Entiendo su molestia. Si yo logro que el banco le exonere todos los intereses y moras, ¿usted estaría dispuesto a cancelar el capital original hoy mismo?", keywords: ["exonere", "elimine", "intereses", "cancelar", "capital", "hoy"], s: "Cierre Condicionado" },
+            { t: "Origen de Fondos", c: "Sondeo Terceros", q: "Voy a ver si me presto plata de mi hermana.", a: "Perfecto Roberto. Para no perder el cupo, ¿cree que su hermana le pueda confirmar el préstamo hoy mismo o mañana a primera hora?", keywords: ["confirmar", "préstamo", "hermana", "hoy", "mañana"], s: "Poner límite de tiempo al tercero" },
+            { t: "Prioridad de Deudas", c: "Sondeo Actual", q: "Ahorita estoy pagando otras deudas que me urgen más.", a: "Comprendo que la situación está pesada. ¿A qué banco o deuda le está dando prioridad en este momento y por qué?", keywords: ["deudas", "prioridad", "momento", "banco", "por", "qué"], s: "Descubrir por qué no somos prioridad" },
+            { t: "Sondeo de Salud", c: "Sondeo Actual", q: "Tuve un accidente y estoy gastando todo en mis medicinas.", a: "Lamento mucho escuchar eso. ¿Usted es el único sustento en su hogar o su cónyuge lo está cubriendo mientras se recupera?", keywords: ["sustento", "hogar", "esposa", "cónyuge", "cubriendo", "recupera"], s: "Buscar apoyo en el entorno" },
+            { t: "Cierre de Abono", c: "Sondeo Liquidez", q: "Sí quiero el descuento de 3000, pero dame unos días.", a: "Valoro su intención. Para que el sistema no anule la campaña por falta de pago, ¿con cuánto puede ir separando o abonando el día de hoy?", keywords: ["cuánto", "separando", "abonando", "hoy", "campaña"], s: "Generar Intención de Pago" }
+        ];
+
+        let currentIndex = -1;
+        let recognition;
+        let synth = window.speechSynthesis;
+        let isTransitioning = false; 
+        let isPaused = false;
+        let mode = 'reading';
+        let isActive = false;
+        let stepTranscript = '';
+
+        window.onload = () => {
+            renderList();
+            initRecognition();
+        };
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('tabReading').classList.toggle('active', m === 'reading');
+            document.getElementById('tabFree').classList.toggle('active', m === 'free');
+            if(isActive && !synth.speaking) renderStep();
+        }
+
+        function renderList() {
+            const list = document.getElementById('objectionList');
+            list.innerHTML = sondeoDB.map((obj, i) => `
+                <div onclick="selectObjection(${i})" class="obj-list-item" id="item-${i}">
+                    <div>
+                        <div class="text-[10px] text-teal-400 font-bold mb-1 tracking-widest uppercase">${obj.c}</div>
+                        <div class="text-white font-medium text-sm">${obj.t}</div>
+                    </div>
+                    <i class="fas fa-play-circle text-slate-500 group-hover:text-teal-400"></i>
+                </div>
+            `).join('');
+        }
+
+        function startSystem() {
+            isActive = true;
+            document.getElementById('btnStart').classList.add('hidden');
+            document.getElementById('btnPause').classList.remove('hidden');
+            selectObjection(0);
+        }
+
+        function togglePause() {
+            if (!isActive || currentIndex === -1) return;
+            const btn = document.getElementById('btnPause');
+            const status = document.getElementById('statusIndicator');
+
+            if (!isPaused) {
+                isPaused = true;
+                if(synth.speaking) synth.pause();
+                if(recognition) recognition.stop();
+                
+                btn.innerHTML = '<i class="fas fa-play mr-1"></i> CONTINUAR';
+                btn.className = "bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition shadow-lg";
+                
+                status.className = "text-sm font-mono text-slate-400 flex items-center gap-2 status-paused bg-slate-800 px-3 py-1 rounded-full border border-slate-600";
+                status.innerHTML = `<i class="fas fa-pause"></i> ENTRENAMIENTO PAUSADO`;
+                document.getElementById('objectionList').style.pointerEvents = 'none';
+                document.getElementById('objectionList').style.opacity = '0.5';
+            } else {
+                isPaused = false;
+                btn.innerHTML = '<i class="fas fa-pause mr-1"></i> PAUSAR';
+                btn.className = "bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition shadow-lg";
+                
+                document.getElementById('objectionList').style.pointerEvents = 'auto';
+                document.getElementById('objectionList').style.opacity = '1';
+
+                if(synth.paused) {
+                    synth.resume();
+                    status.className = "text-sm font-mono text-yellow-500 flex items-center gap-2 status-talking bg-slate-900 px-3 py-1 rounded-full border border-slate-700";
+                    status.innerHTML = `<i class="fas fa-volume-up"></i> CLIENTE HABLANDO...`;
+                } else if (!synth.speaking) {
+                    try { recognition.start(); } catch(e) {}
+                    status.className = "text-sm font-mono text-teal-400 flex items-center gap-2 status-listening bg-slate-900 px-3 py-1 rounded-full border border-slate-700";
+                    status.innerHTML = `<i class="fas fa-microphone"></i> TU TURNO (SONDEA)`;
+                }
+            }
+        }
+
+        function selectObjection(index) {
+            if(isPaused) return; 
+            isTransitioning = false;
+            if(recognition) recognition.stop();
+
+            document.querySelectorAll('.obj-list-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`item-${index}`).classList.add('active');
+            
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('botArea').classList.remove('hidden');
+            document.getElementById('userArea').classList.add('hidden'); 
+            document.getElementById('micHint').innerHTML = '<i class="fas fa-microphone text-teal-500"></i> Lee en voz alta para avanzar';
+
+            currentIndex = index;
+            const data = sondeoDB[index];
+
+            document.getElementById('strategyDisplay').innerHTML = `<span class="strategy-badge"><i class="fas fa-crosshairs text-teal-400 mr-1"></i> OBJETIVO: ${data.s}</span>`;
+            document.getElementById('botText').innerText = `"${data.q}"`;
+            
+            playBotAudio(data.q);
+        }
+
+        function renderStep() {
+            const data = sondeoDB[currentIndex];
+            let text = data.a;
+            
+            if (mode === 'free') {
+                text = `<span class="text-slate-300 italic text-lg"><i class="fas fa-microphone-alt text-teal-400"></i> Realiza la pregunta con tus propias palabras logrando el objetivo.</span><br><br><span class="text-xs text-teal-300 font-normal">Palabras clave esperadas: ${data.keywords.join(', ')}</span>`;
+                document.getElementById('userLabel').innerText = "Tu Objetivo de Sondeo:";
+                document.getElementById('advisorBox').className = "user-bubble shadow-xl border-dashed border-2 border-teal-500 bg-slate-800";
+            } else {
+                text = `"${text}"`;
+                document.getElementById('userLabel').innerText = "Tu Pregunta Sugerida:";
+                document.getElementById('advisorBox').className = "user-bubble shadow-xl";
+            }
+            document.getElementById('advisorText').innerHTML = text;
+        }
+
+        function playBotAudio(text) {
+            if(synth.speaking) synth.cancel();
+            
+            const status = document.getElementById('statusIndicator');
+            status.className = "text-sm font-mono text-yellow-500 flex items-center gap-2 status-talking bg-slate-900 px-3 py-1 rounded-full border border-slate-700";
+            status.innerHTML = `<i class="fas fa-volume-up"></i> CLIENTE HABLANDO...`;
+
+            // Voz del Coach para contexto
+            const preUtter = new SpeechSynthesisUtterance("El cliente dice.");
+            preUtter.lang = 'es-MX'; preUtter.rate = 1.2;
+
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'es-US'; utter.rate = 1.1;
+
+            utter.onend = () => {
+                if(isPaused) return; 
+
+                renderStep();
+                document.getElementById('userArea').classList.remove('hidden');
+                status.className = "text-sm font-mono text-teal-400 flex items-center gap-2 status-listening bg-slate-900 px-3 py-1 rounded-full border border-slate-700";
+                status.innerHTML = `<i class="fas fa-microphone"></i> TU TURNO (SONDEA)`;
+                
+                stepTranscript = '';
+                setTimeout(() => { try { recognition.start(); } catch(e) {} }, 500);
+            };
+
+            synth.speak(preUtter);
+            synth.speak(utter);
+        }
+
+        function replayBot() {
+            if(currentIndex >= 0 && !isPaused) playBotAudio(sondeoDB[currentIndex].q);
+        }
+
+        function initRecognition() {
+            const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!Speech) return;
+            
+            recognition = new Speech();
+            recognition.lang = 'es-PE';
+            recognition.continuous = false;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                if(isTransitioning || isPaused) return;
+
+                let transcript = '';
+                let isFinal = false;
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        transcript = event.results[i][0].transcript;
+                        stepTranscript += transcript + " ";
+                        isFinal = true;
+                    }
+                }
+
+                if (isFinal && transcript.trim().length > 15) {
+                    isTransitioning = true;
+                    recognition.stop(); 
+
+                    const hint = document.getElementById('micHint');
+                    hint.innerHTML = `<span class='text-teal-400 font-bold'><i class="fas fa-check"></i> Buen sondeo. Pasando al siguiente...</span>`;
+                    
+                    document.getElementById('statusIndicator').className = "text-sm font-mono text-blue-400 flex items-center gap-2 bg-slate-900 px-3 py-1 rounded-full border border-slate-700";
+                    document.getElementById('statusIndicator').innerHTML = `<i class="fas fa-spinner fa-spin"></i> PROCESANDO...`;
+
+                    setTimeout(() => {
+                        if(!isPaused) nextObjection();
+                    }, 2000);
+                    
+                } else if (!isFinal) {
+                    document.getElementById('micHint').innerHTML = "<span class='text-yellow-400'><i class='fas fa-assistive-listening-systems'></i> Escuchando pregunta...</span>";
+                }
+            };
+            
+            recognition.onend = () => {
+                if (!isTransitioning && !isPaused && currentIndex !== -1 && !synth.speaking && isActive) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+        }
+
+        function nextObjection() {
+            if(isPaused) return;
+            let next = currentIndex + 1;
+            if(next >= sondeoDB.length) {
+                alert("¡Felicidades! Has completado el laboratorio de Sondeo.");
+                next = 0; 
+                isActive = false;
+                document.getElementById('btnStart').classList.remove('hidden');
+                document.getElementById('btnPause').classList.add('hidden');
+                document.getElementById('startScreen').classList.remove('hidden');
+                document.getElementById('botArea').classList.add('hidden');
+                document.getElementById('userArea').classList.add('hidden');
+                return;
+            }
+            
+            selectObjection(next);
+            const item = document.getElementById(`item-${next}`);
+            if(item) item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+    </script>
+</body>
+</html>
