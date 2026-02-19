@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dojo de Objeciones - QA Vocal Coach</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        
+        /* CARD STYLES */
+        .obj-list-item {
+            background: #1e293b; border: 1px solid #334155; padding: 15px;
+            cursor: pointer; transition: all 0.2s; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .obj-list-item:hover { background: #334155; }
+        .obj-list-item.active { border-color: #f59e0b; background: #2a3441; border-left: 4px solid #f59e0b; }
+
+        .interaction-card {
+            background: #1e293b; border-radius: 16px; border: 1px solid #3b82f6;
+            min-height: 500px; display: flex; flex-direction: column; position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1);
+        }
+
+        .bot-bubble {
+            background: #475569; color: #e2e8f0; padding: 15px 20px; border-radius: 20px 20px 20px 0;
+            margin-bottom: 20px; max-width: 85%; align-self: flex-start;
+            border-left: 4px solid #94a3b8; animation: slideInLeft 0.3s;
+        }
+
+        .user-bubble {
+            background: #1e3a8a; color: white; padding: 20px; border-radius: 20px 20px 0 20px;
+            margin-top: auto; align-self: flex-end; width: 100%;
+            border-right: 4px solid #3b82f6; animation: slideInUp 0.3s;
+        }
+
+        .strategy-badge {
+            background: #422006; color: #fcd34d; padding: 6px 14px; border-radius: 6px;
+            font-size: 0.8rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;
+            border: 1px solid #f59e0b; display: inline-block; margin-bottom: 10px;
+        }
+
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* STATUS INDICATORS */
+        .status-listening { color: #4ade80; animation: pulse 1.5s infinite; }
+        .status-talking { color: #facc15; }
+        .status-paused { color: #94a3b8; }
+        .status-success { color: #4ade80; font-weight: bold; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 overflow-hidden">
+
+    <div class="flex justify-between items-center mb-6 shrink-0">
+        <div>
+            <h1 class="text-3xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-shield-alt text-yellow-500"></i> DOJO DE OBJECIONES
+            </h1>
+            <p class="text-slate-400 text-sm">Entrenamiento de Respuesta Rápida (Módulo Independiente)</p>
+        </div>
+        
+        <div class="flex gap-3">
+            <button id="btnPause" onclick="togglePause()" class="hidden bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition shadow-lg flex items-center">
+                <i class="fas fa-pause mr-2"></i> PAUSAR
+            </button>
+            <a href="index.html" class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2 rounded-lg text-sm font-bold transition shadow-lg flex items-center">
+                <i class="fas fa-home mr-2"></i> Volver al Portal
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-8 flex-1 min-h-0 max-w-7xl mx-auto w-full">
+        
+        <div class="col-span-4 bg-slate-900 rounded-xl border border-slate-700 flex flex-col overflow-hidden shadow-lg">
+            <div class="p-4 bg-slate-800 border-b border-slate-700">
+                <h3 class="text-sm font-bold text-blue-400 uppercase tracking-widest"><i class="fas fa-list-ul mr-2"></i>20 Escenarios Reales</h3>
+            </div>
+            <div class="overflow-y-auto flex-1 p-3 space-y-2" id="objectionList">
+                </div>
+        </div>
+
+        <div class="col-span-8 flex flex-col">
+            <div class="interaction-card p-8 flex-1">
+                
+                <div class="flex justify-between items-start mb-6">
+                    <div id="strategyDisplay">
+                        </div>
+                    <div id="statusIndicator" class="text-sm font-mono text-slate-500 flex items-center gap-2 bg-slate-900 px-4 py-1.5 rounded-full border border-slate-700">
+                        <i class="fas fa-circle text-[10px]"></i> ESPERANDO SELECCIÓN
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col relative">
+                    
+                    <div id="botArea" class="hidden flex flex-col items-start">
+                        <span class="text-xs text-slate-400 mb-1 ml-1 font-bold tracking-widest">CLIENTE (Roberto):</span>
+                        <div class="bot-bubble text-xl font-medium" id="botText">...</div>
+                        <button onclick="replayBot()" class="text-xs text-slate-500 hover:text-white mt-1 ml-1 transition">
+                            <i class="fas fa-redo"></i> Repetir audio
+                        </button>
+                    </div>
+
+                    <div id="userArea" class="hidden mt-auto pt-4">
+                        <div class="flex justify-between items-end mb-2 ml-1">
+                            <span class="text-xs text-blue-400 font-bold uppercase tracking-widest">Tu Respuesta Sugerida:</span>
+                            <span class="text-xs text-slate-500 bg-slate-900 px-3 py-1 rounded-full border border-slate-700" id="micHint">
+                                <i class="fas fa-microphone text-blue-500"></i> Lee en voz alta para avanzar
+                            </span>
+                        </div>
+                        <div class="user-bubble shadow-xl">
+                            <p id="advisorText" class="text-2xl font-semibold leading-relaxed">...</p>
+                        </div>
+                    </div>
+
+                    <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center text-center bg-slate-900/80 backdrop-blur-sm rounded-xl z-10">
+                        <div class="bg-blue-900/30 p-6 rounded-full mb-6 border border-blue-500/30">
+                            <i class="fas fa-dumbbell text-6xl text-blue-400"></i>
+                        </div>
+                        <h2 class="text-3xl text-white font-bold mb-3">Laboratorio de Objeciones</h2>
+                        <p class="text-slate-400 text-base max-w-md mb-8">El sistema avanzará automáticamente al detectar la solución. (Fórmula: Empatía + Alternativa + Beneficio)</p>
+                        <button id="btnStart" onclick="startSystem()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-10 rounded-full shadow-lg transition text-lg flex items-center gap-2">
+                            <i class="fas fa-play"></i> COMENZAR ENTRENAMIENTO
+                        </button>
+                    </div>
+
+                </div>
+
+                <div class="mt-8 pt-6 border-t border-slate-700/50 flex justify-between items-center">
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-900 px-3 py-1 rounded">
+                        Objeción <span id="counter" class="text-white text-base">0</span> de 20
+                    </div>
+                    <button id="nextBtn" onclick="nextObjection()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition hidden flex items-center gap-2">
+                        Forzar Siguiente <i class="fas fa-forward"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- BASE DE DATOS DE 20 OBJECIONES REALES (NUEVO ENFOQUE: Empatía + Alternativa + Beneficio/Consecuencia) ---
+        const objectionsDB = [
+            { t: "No tengo dinero", q: "Ahorita estoy aguja, no tengo ni un sol.", a: "Entiendo perfectamente que la situación económica está difícil. Por eso, como alternativa le ofrezco fraccionar su deuda en cuotas muy pequeñas. Tomar este acuerdo le permitirá frenar el cobro de intereses y evitar que su calificación crediticia empeore.", s: "Empatía + Cuotas + Evitar Intereses", keywords: ["entiendo", "difícil", "alternativa", "fraccionar", "cuotas", "intereses", "calificación"] },
+            { t: "Sin trabajo", q: "Me botaron del trabajo, no tengo ingresos.", a: "Lamento mucho su situación laboral, Roberto. Precisamente para ayudarle, podemos reestructurar su cuenta con un plazo más largo. Así, cuando consiga empleo, su deuda no habrá crecido y mantendrá las puertas abiertas en el sistema financiero.", s: "Empatía + Reestructuración + Mantiene Crédito", keywords: ["lamento", "laboral", "ayudarle", "reestructurar", "plazo", "crecido", "sistema"] },
+            { t: "Fin de mes", q: "Llámame el 30 cuando me paguen.", a: "Comprendo que sus ingresos recién llegan a fin de mes. Lo que le propongo es registrar hoy un compromiso formal de pago para esa fecha. Esto le garantiza asegurar el descuento actual y frena cualquier acción de cobranza judicial.", s: "Empatía + Compromiso a Fecha + Evita Legal", keywords: ["comprendo", "ingresos", "propongo", "registrar", "compromiso", "garantiza", "cobranza"] },
+            { t: "Intereses altos", q: "Es un abuso lo que cobran de intereses.", a: "Entiendo su molestia por los intereses generados. Justamente mi llamada es para ofrecerle la anulación total de esos cobros si programamos el capital en cuotas. Esto le permite un ahorro significativo y cerrar este capítulo definitivamente.", s: "Empatía + Anulación + Ahorro", keywords: ["entiendo", "molestia", "ofrecerle", "anulación", "programamos", "cuotas", "ahorro"] },
+            { t: "Es estafa", q: "No confío, seguro es estafa.", a: "Hace muy bien en ser precavido con su dinero. Le propongo acercarse directamente a la agencia bancaria más cercana con su DNI para validar esta campaña. Así tendrá la total seguridad del trámite y podrá recuperar su tranquilidad financiera.", s: "Validación + Derivar a Agencia + Seguridad", keywords: ["precavido", "dinero", "propongo", "agencia", "bancaria", "validar", "seguridad"] },
+            { t: "Monto muy alto", q: "Esos 3 mil soles son impagables.", a: "Entiendo que ver el monto total asusta. Por eso, he habilitado una opción para dividir este saldo en partes más accesibles según su capacidad. De esta manera, usted evita el proceso de embargo preventivo y paga cómodamente.", s: "Empatía + Fraccionar + Evitar Embargo", keywords: ["entiendo", "asusta", "opción", "dividir", "accesibles", "evita", "embargo"] },
+            { t: "Tengo hijos", q: "Tengo 4 hijos que mantener, no me alcanza.", a: "Comprendo que su familia es la prioridad absoluta. Para no afectar su economía del hogar, le brindo la alternativa de un pago fraccionado a su medida. Así, asegura un buen historial crediticio que le servirá más adelante para proyectos familiares.", s: "Empatía + Fraccionamiento + Beneficio Futuro", keywords: ["comprendo", "familia", "prioridad", "alternativa", "fraccionado", "historial", "proyectos"] },
+            { t: "Enfermedad", q: "Estoy gastando todo en medicinas.", a: "Siento mucho lo de su salud, eso es lo principal. Para evitarle preocupaciones adicionales, le ofrezco ingresar a un programa de reprogramación médica. Esto detendrá las llamadas de cobranza y le permitirá enfocarse al cien por ciento en su recuperación.", s: "Empatía + Reprogramación + Detener Llamadas", keywords: ["siento", "salud", "preocupaciones", "reprogramación", "médica", "detendrá", "recuperación"] },
+            { t: "Ya pagué", q: "Yo ya pagué eso hace días.", a: "¡Comprendo, esa es una excelente noticia! Para solucionar este cruce de información, le pediré que por favor nos remita la constancia a nuestros canales oficiales. Esto actualizará su estado inmediatamente y evitará que su calificación siga afectada por error.", s: "Validación + Solicitud Evidencia + Corrección", keywords: ["comprendo", "excelente", "cruce", "remita", "constancia", "canales", "actualizará"] },
+            { t: "No es mi deuda", q: "Ese es mi hermano, él no vive acá.", a: "Entiendo la situación. Como usted figura como titular o aval, le sugiero que coordinemos una reestructuración de la cuenta a plazos largos. Si no lo solucionamos, lamentablemente su nombre quedará reportado, impidiéndole sacar créditos a futuro.", s: "Empatía + Reestructuración + Consecuencia a Aval", keywords: ["entiendo", "titular", "aval", "sugiero", "reestructuración", "reportado", "créditos"] },
+            { t: "Me voy a quejar", q: "Ya me tienen harto, los voy a denunciar.", a: "Comprendo su molestia y le pido las disculpas del caso. Precisamente para dejar de incomodarlo, le ofrezco un acuerdo de refinanciación con meses de gracia. Aceptar esta salida pacífica detendrá las gestiones de cobranza inmediatamente.", s: "Empatía/Disculpa + Refinanciación + Fin de Cobranza", keywords: ["comprendo", "molestia", "disculpas", "acuerdo", "refinanciación", "gracia", "detendrá"] },
+            { t: "Quincena", q: "Hasta la quincena no tengo ni un sol.", a: "Entiendo que debe esperar a su quincena. Le propongo agendar formalmente el compromiso para esa fecha mediante nuestro sistema. Hacer esto hoy mismo le evitará el pase automático a la vía pre-judicial que estaba programado para esta semana.", s: "Empatía + Agendar Fecha + Evitar Pre-judicial", keywords: ["entiendo", "esperar", "quincena", "agendar", "formalmente", "evitará", "judicial"] },
+            { t: "Banco malo", q: "Ese banco nunca me ayudó.", a: "Comprendo su descontento por malas experiencias pasadas. Para cambiar esa imagen, le ofrezco la opción de liquidar esta cuenta con condonación de moras. Es la mejor forma de desvincularse del banco favorablemente y sin arrastrar una calificación negativa.", s: "Empatía + Condonación + Desvinculación Positiva", keywords: ["comprendo", "descontento", "experiencias", "ofrezco", "condonación", "desvincularse", "negativa"] },
+            { t: "Abogado", q: "Hablen con mi abogado, no conmigo.", a: "Respeto su decisión de asesorarse. Sin embargo, le ofrezco una vía conciliatoria mediante un convenio de pago en cuotas sin intervención legal. Esto le evitará asumir costosos honorarios de abogados y un proceso judicial largo.", s: "Validación + Convenio + Ahorro Honorarios", keywords: ["respeto", "decisión", "asesorarse", "convenio", "cuotas", "evitará", "honorarios"] },
+            { t: "De viaje", q: "Estoy de viaje, regreso el lunes.", a: "Entiendo que se encuentra fuera. Le ofrezco reprogramar la deuda para que su primera cuota venza cuando usted ya haya retornado. Así disfrutará su viaje sin llamadas de cobranza y mantendrá activo este descuento exclusivo.", s: "Empatía + Reprogramación + Mantener Descuento", keywords: ["entiendo", "fuera", "reprogramar", "primera", "cuota", "retornado", "descuento"] },
+            { t: "Infocorp", q: "Ya estoy en rojo, ya qué importa.", a: "Comprendo su desánimo respecto a Infocorp. Como alternativa, si acordamos un plan de pagos escalonado, el banco reportará inmediatamente su buena voluntad. Esto mejorará progresivamente su score, permitiéndole reinsertarse al sistema financiero.", s: "Empatía + Pagos Escalonados + Mejora Score", keywords: ["comprendo", "desánimo", "alternativa", "escalonado", "reportará", "mejorará", "reinsertarse"] },
+            { t: "No quiero", q: "No voy a pagar, hagan lo que quieran.", a: "Entiendo su postura inicial, Roberto. Le propongo que revisemos juntos un plan de sinceramiento donde solo pague el capital prestado. Tomar esta alternativa amigable le evitará el congelamiento de sus cuentas bancarias y un posible embargo.", s: "Empatía + Sinceramiento Capital + Evitar Embargo", keywords: ["entiendo", "postura", "propongo", "sinceramiento", "capital", "evitará", "congelamiento"] },
+            { t: "Solo una parte", q: "Solo tengo 500 soles, tómalo o déjalo.", a: "Valoro su honestidad sobre el monto del que dispone. Con esa cantidad, podemos establecer un fraccionamiento del saldo restante en pequeñas mensualidades. Así, usted se beneficia de la campaña de descuento sin descapitalizarse por completo.", s: "Validación + Fraccionar Saldo + Beneficio Descuento", keywords: ["valoro", "honestidad", "dispone", "establecer", "fraccionamiento", "restante", "beneficia"] },
+            { t: "Sin boleta", q: "Trabajo el día a día, no tengo boleta.", a: "Entiendo cómo funciona el trabajo independiente. Por ello, le ofrezco una facilidad de pago sin evaluación de ingresos ni papeleos. Acogerse a esta modalidad le permitirá saldar la deuda a su propio ritmo, evitando penalidades diarias.", s: "Empatía + Cero Papeleos + Evitar Penalidades", keywords: ["entiendo", "independiente", "ofrezco", "evaluación", "papeleos", "ritmo", "penalidades"] },
+            { t: "Muy lejos", q: "El banco me queda muy lejos.", a: "Comprendo la dificultad del traslado. Como solución, le genero un código para que pueda cancelar en cualquier agente o aplicación móvil. Hacerlo por estos canales le ahorrará tiempo y asegurará la liquidación de la deuda al instante.", s: "Empatía + Canales Digitales + Ahorro de Tiempo", keywords: ["comprendo", "dificultad", "solución", "código", "aplicación", "ahorrará", "liquidación"] }
+        ];
+
+        let currentIndex = -1;
+        let recognition;
+        let synth = window.speechSynthesis;
+        let isTransitioning = false; 
+        let isPaused = false;
+        let isActive = false;
+        let pendingTransition = false; 
+
+        window.onload = () => {
+            renderList();
+            initRecognition();
+        };
+
+        function renderList() {
+            const list = document.getElementById('objectionList');
+            list.innerHTML = objectionsDB.map((obj, i) => `
+                <div onclick="selectObjection(${i})" class="obj-list-item" id="item-${i}">
+                    <div>
+                        <div class="text-[10px] text-blue-400 font-bold mb-1 tracking-widest uppercase">CASO ${i+1}</div>
+                        <div class="text-white font-medium text-sm">"${obj.t}"</div>
+                    </div>
+                    <i class="fas fa-play-circle text-slate-500 group-hover:text-blue-400 transition"></i>
+                </div>
+            `).join('');
+        }
+
+        function startSystem() {
+            isActive = true;
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('btnPause').classList.remove('hidden');
+            selectObjection(0);
+        }
+
+        // --- LÓGICA DE PAUSA INTELIGENTE ---
+        function togglePause() {
+            if (!isActive || currentIndex === -1) return;
+
+            const btn = document.getElementById('btnPause');
+            const status = document.getElementById('statusIndicator');
+
+            if (!isPaused) {
+                // ACTIVAR PAUSA
+                isPaused = true;
+                if(synth.speaking) synth.pause();
+                if(recognition) recognition.stop();
+                
+                btn.innerHTML = '<i class="fas fa-play mr-2"></i> CONTINUAR';
+                btn.className = "bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition shadow-lg flex items-center";
+                
+                status.className = "text-sm font-mono text-slate-400 flex items-center gap-2 status-paused bg-slate-800 px-4 py-1.5 rounded-full border border-slate-600";
+                status.innerHTML = `<i class="fas fa-pause"></i> ENTRENAMIENTO PAUSADO`;
+                
+                document.getElementById('objectionList').style.pointerEvents = 'none';
+                document.getElementById('objectionList').style.opacity = '0.5';
+
+            } else {
+                // DESACTIVAR PAUSA
+                isPaused = false;
+                btn.innerHTML = '<i class="fas fa-pause mr-2"></i> PAUSAR';
+                btn.className = "bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition shadow-lg flex items-center";
+                
+                document.getElementById('objectionList').style.pointerEvents = 'auto';
+                document.getElementById('objectionList').style.opacity = '1';
+
+                // Reanudar según el estado
+                if(synth.paused) {
+                    synth.resume();
+                    status.className = "text-sm font-mono text-yellow-500 flex items-center gap-2 status-talking bg-slate-900 px-4 py-1.5 rounded-full border border-slate-700";
+                    status.innerHTML = `<i class="fas fa-volume-up"></i> CLIENTE HABLANDO...`;
+                } else if (pendingTransition) {
+                    pendingTransition = false;
+                    nextObjection();
+                } else if (!synth.speaking) {
+                    try { recognition.start(); } catch(e) {}
+                    status.className = "text-sm font-mono text-green-400 flex items-center gap-2 status-listening bg-slate-900 px-4 py-1.5 rounded-full border border-slate-700";
+                    status.innerHTML = `<i class="fas fa-microphone"></i> TU TURNO (LEE EL GUION)`;
+                }
+            }
+        }
+
+        function selectObjection(index) {
+            if(isPaused) return; 
+            
+            isTransitioning = false;
+            pendingTransition = false;
+            if(recognition) recognition.stop();
+
+            document.querySelectorAll('.obj-list-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`item-${index}`).classList.add('active');
+            
+            document.getElementById('botArea').classList.remove('hidden');
+            document.getElementById('userArea').classList.add('hidden'); 
+            document.getElementById('nextBtn').classList.add('hidden');
+            document.getElementById('micHint').innerHTML = '<i class="fas fa-microphone text-blue-500"></i> Lee en voz alta para avanzar';
+
+            currentIndex = index;
+            document.getElementById('counter').innerText = index + 1;
+            const data = objectionsDB[index];
+
+            // Update Badge Strategy
+            document.getElementById('strategyDisplay').innerHTML = `<span class="strategy-badge"><i class="fas fa-bolt text-yellow-500 mr-2"></i> ESTRUCTURA: ${data.s}</span>`;
+            document.getElementById('botText').innerText = `"${data.q}"`;
+            document.getElementById('advisorText').innerText = `"${data.a}"`;
+            
+            playBotAudio(data.q);
+        }
+
+        function playBotAudio(text) {
+            if(synth.speaking) synth.cancel();
+            
+            const status = document.getElementById('statusIndicator');
+            status.className = "text-sm font-mono text-yellow-500 flex items-center gap-2 status-talking bg-slate-900 px-4 py-1.5 rounded-full border border-slate-700";
+            status.innerHTML = `<i class="fas fa-volume-up"></i> CLIENTE HABLANDO...`;
+
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'es-US'; 
+            utter.rate = 1.1;
+
+            utter.onend = () => {
+                if(isPaused) return; 
+
+                document.getElementById('userArea').classList.remove('hidden');
+                
+                status.className = "text-sm font-mono text-green-400 flex items-center gap-2 status-listening bg-slate-900 px-4 py-1.5 rounded-full border border-slate-700";
+                status.innerHTML = `<i class="fas fa-microphone"></i> TU TURNO (LEE EL GUION)`;
+                
+                try { recognition.start(); } catch(e) {}
+            };
+
+            synth.speak(utter);
+        }
+
+        function replayBot() {
+            if(currentIndex >= 0 && !isPaused) playBotAudio(objectionsDB[currentIndex].q);
+        }
+
+        function initRecognition() {
+            const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!Speech) return;
+            
+            recognition = new Speech();
+            recognition.lang = 'es-PE';
+            recognition.continuous = false;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                if(isTransitioning || isPaused) return;
+
+                let transcript = '';
+                let isFinal = false;
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        transcript = event.results[i][0].transcript;
+                        isFinal = true;
+                    }
+                }
+
+                // Auto-Avance al detectar lectura (>10 caracteres)
+                if (isFinal && transcript.trim().length > 10) {
+                    isTransitioning = true;
+                    recognition.stop(); 
+
+                    const hint = document.getElementById('micHint');
+                    hint.innerHTML = `<span class='text-green-400 font-bold'><i class="fas fa-check-circle mr-1"></i> ¡Excelente manejo! Avanzando...</span>`;
+                    
+                    document.getElementById('statusIndicator').className = "text-sm font-mono text-blue-400 flex items-center gap-2 bg-slate-900 px-4 py-1.5 rounded-full border border-slate-700";
+                    document.getElementById('statusIndicator').innerHTML = `<i class="fas fa-spinner fa-spin"></i> PROCESANDO...`;
+
+                    // Espera 2s para que termine de leer tranquilo
+                    setTimeout(() => {
+                        if(!isPaused) {
+                            nextObjection();
+                        } else {
+                            pendingTransition = true;
+                        }
+                    }, 2000);
+                    
+                } else if (!isFinal) {
+                    document.getElementById('micHint').innerHTML = "<span class='text-yellow-400'><i class='fas fa-assistive-listening-systems'></i> Escuchando...</span>";
+                }
+            };
+            
+            recognition.onend = () => {
+                // Auto-reconectar si se apaga solo
+                if (!isTransitioning && !isPaused && currentIndex !== -1 && !synth.speaking && isActive) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+        }
+
+        function nextObjection() {
+            if(isPaused) return;
+            let next = currentIndex + 1;
+            
+            if(next >= objectionsDB.length) {
+                alert("🎉 ¡Felicidades! Has completado el entrenamiento de 20 objeciones.");
+                next = 0;
+                isActive = false;
+                document.getElementById('startScreen').classList.remove('hidden');
+                document.getElementById('btnPause').classList.add('hidden');
+                document.getElementById('botArea').classList.add('hidden');
+                document.getElementById('userArea').classList.add('hidden');
+                return;
+            }
+            
+            selectObjection(next);
+            
+            // Auto-scroll
+            const item = document.getElementById(`item-${next}`);
+            if(item) item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+    </script>
+</body>
+</html>
